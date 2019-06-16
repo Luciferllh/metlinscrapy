@@ -66,6 +66,7 @@ class ChemicalAnalysis(object):
         table_list=self.table_list(tree)
 
         if len(table_list) == 0 :
+            print(f'{self.masses}查询完成,没有查到数据')
             return  [{"id": 'na', 'kind':'na',"mass":self.masses,"ppm":'na',"name": 'na', "formula": 'na', 'img': 'na'}]
 
         title_list = self.title_list()
@@ -81,6 +82,7 @@ class ChemicalAnalysis(object):
             img_list = table.xpath('.//tbody/tr/td[@id="molImg"]/a/@href')
             data_list = map(self.match, id_list,kind_list,mass_list,ppm_list,name_list, formula_list, img_list)
             total_data_list.extend(list(data_list))
+        print(f'{self.masses}查询完成,查到数据')
         return total_data_list
 
     def title_list(self):
