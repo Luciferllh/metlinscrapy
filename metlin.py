@@ -4,12 +4,13 @@
 # @Software: PyCharm
 
 import requests
-import multiprocessing
 import time
 from lxml import etree
-from openpyxl import Workbook
-from openpyxl import load_workbook
 import pandas as pd
+
+
+from word import WordMass
+from excel import ExcelMass
 
 class ChemicalAnalysis(object):
     """
@@ -104,34 +105,21 @@ class ChemicalAnalysis(object):
         return data_list
 
 
-class Masses(object):
-
-    def __init__(self,filename):
-        self.sheet=load_workbook(filename=filename)['Sheet1']
-        self.mass_list=self.get_masses()
-
-    def get_masses(self):
-        masses_list=[]
-        for cell  in self.sheet['C']:
-            if cell.value is not None and cell.value != '质荷比' :
-                masses_list.append(cell.value)
-        return masses_list
-
-
-
-
 if __name__ == "__main__":
-
-
-    mass_list=Masses(filename='META.xlsx').mass_list
-    # for mass in mass_list:
-    #     pool.apply_async(ChemicalAnalysis,(mass,))
-    # pool.close()
-    # pool.join()
+    # ChemicalAnalysis(masses=158.0409)
+    path='只存在DT-8.docx'
+    if path.endswith('xlsx'):
+        mass_list=ExcelMass(path=path).mass_list
+    else:
+        mass_list=WordMass(path=path).mass_list
+    # # for mass in mass_list:
+    # #     pool.apply_async(ChemicalAnalysis,(mass,))
+    # # pool.close()
+    # # pool.join()
     total_data=[]
     for mass in mass_list:
         chemical_data=ChemicalAnalysis(masses=mass).data_list
         total_data.extend(chemical_data)
         time.sleep(5)
     df=pd.DataFrame(total_data,dtype=str)
-    df.to_excel('after.xlsx',encoding='utf-8')
+    df.to_excel('DT-8.xlsx',encoding='utf-8')
