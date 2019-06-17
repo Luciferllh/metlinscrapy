@@ -5,34 +5,42 @@
 
 import requests
 import time
-from lxml import etree
 import pandas as pd
+import random
+
+from lxml import etree
+from fake_useragent import UserAgent
+
 
 
 from word import WordMass
 from excel import ExcelMass
+from cookie import COOKIE
+
 
 class ChemicalAnalysis(object):
     """
     从metlin.scripps.edu爬出数据的类
     """
 
-    def __init__(self, masses):
+    def __init__(self, masses,adducts,cookie):
         """
         初始化请求url和请求头
         """
         self.url = 'https://metlin.scripps.edu/batch_search_result.php'
         self.headers = {
-            'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.90 Safari/537.36",
+            'User-Agent': UserAgent().random,
+            'cookie':cookie
         }
         self.masses=masses
+        self.adducts=adducts
         self.params = {
-            "masses": masses,
-            "adducts": "M+H,M+NH4,M+Na",
+            "masses": self.masses,
+            "adducts": self.adducts,
             "ppm": "20",
             "modes": "1",
             "structure": "Y",
-            "formVar": "M+H,M+NH4,M+Na",
+            "formVar": self.adducts,
             "AminoAcid": "remove",
             "drug": "remove",
             "toxinEPA": "remove",
@@ -67,27 +75,25 @@ class ChemicalAnalysis(object):
         table_list=self.table_list(tree)
 
         if len(table_list) == 0 :
-            print(f'{self.masses}查询完成,没有查到数据')
-            return  [{"id": 'na', 'kind':'na',"mass":self.masses,"ppm":'na',"name": 'na', "formula": 'na', 'img': 'na'}]
-
-        title_list = self.title_list()
+            print(f'{self.masses} {self.adducts}查询完成,没有查到数据')
+            return  [{"id": 'na', 'kind':self.adducts,"mass":self.masses,"ppm":'na',"name": 'na', "formula": 'na', 'img': 'na'}]
 
         total_data_list = []
         for index, table in enumerate(table_list):
             id_list = table.xpath('.//tbody/tr/th/a/text()')
             ppm_list = table.xpath('.//tbody/tr/td[2]/text()')
-            kind_list = [title_list[index] for i in range(len(id_list))]
+            kind_list = [self.adducts for i in range(len(id_list))]
             mass_list = [self.masses for i in range(len(id_list))]
             name_list = table.xpath('.//tbody/tr/td[3]/text()')
             formula_list = table.xpath('.//tbody/tr/td[4]/text()')
             img_list = table.xpath('.//tbody/tr/td[@id="molImg"]/a/@href')
             data_list = map(self.match, id_list,kind_list,mass_list,ppm_list,name_list, formula_list, img_list)
             total_data_list.extend(list(data_list))
-        print(f'{self.masses}查询完成,查到数据')
+        print(f'{self.masses} {self.adducts}查询完成,查到数据')
         return total_data_list
 
-    def title_list(self):
-        return ['M+H','M+NH4','M+Na']
+    # def title_list(self,tree):
+    #     return tree.xpath('//div//b[1]/text()')
 
 
     def get_tree(self):
@@ -106,20 +112,18 @@ class ChemicalAnalysis(object):
 
 
 if __name__ == "__main__":
-    # ChemicalAnalysis(masses=158.0409)
-    path='只存在DT-8.docx'
+    # ChemicalAnalysis(masses=325.1192,adducts='M+NH4')
+    path='只存在A367-HADV.docx'
     if path.endswith('xlsx'):
         mass_list=ExcelMass(path=path).mass_list
     else:
         mass_list=WordMass(path=path).mass_list
-    # # for mass in mass_list:
-    # #     pool.apply_async(ChemicalAnalysis,(mass,))
-    # # pool.close()
-    # # pool.join()
     total_data=[]
+    adducts_list=['M+H','M+NH4','M+Na']
     for mass in mass_list:
-        chemical_data=ChemicalAnalysis(masses=mass).data_list
-        total_data.extend(chemical_data)
-        time.sleep(5)
+        for adducts in adducts_list:
+            chemical_data=ChemicalAnalysis(masses=mass,adducts=adducts,cookie=COOKIE).data_list
+            total_data.extend(chemical_data)
+            time.sleep(random.uniform(5,8))
     df=pd.DataFrame(total_data,dtype=str)
-    df.to_excel('DT-8.xlsx',encoding='utf-8')
+    df.to_excel(f'{path}+.xlsx',encoding='utf-8')
